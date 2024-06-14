@@ -1,0 +1,53 @@
+Gradle has a wide range of built-in and project-specific commands. Here's a list of some common ones with examples and usage.
+
+gradle <task name>: Executes the specified task.
+
+ 
+
+gradle init
+
+Initializes a new Gradle project with prompts.
+
+gradle build 
+
+This command is used to build the project.
+
+gradle clean
+
+This command is used to clean the build directory.
+
+gradle test
+
+This command is used to run tests.
+
+gradle run
+
+This command is used to run the project.
+
+gradle pmdMain
+
+This command is used to run the PMD code analyzer against your project's main source code files. Reports will be available in build/reports/pmd/main.html
+
+gradle dependencyCheckAnalyze
+
+This scans your dependencies for known vulnerabilities and generates reports.
+
+gradle artifactoryPublish
+
+This publishes your build artifacts to the specified Artifactory repository.
+
+ 
+
+You can combine multiple tasks in a single command. Here are some more Gradle tasks along with combinations of tasks and their example usage:
+
+gradle clean build
+
+This command cleans the project and then build it.
+
+gradle build sonar
+
+This command builds the project and triggers a SonarQube analysis for code quality and security assessment.
+
+gradle clean check
+
+The command cleans the project, runs tests and verifies code functionality by additional checks such as static code analysis(PMD), code coverage checks, and other verifications. 

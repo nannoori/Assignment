@@ -1,0 +1,153 @@
+// Configure repositories for accessing build plugins
+buildscript {
+    repositories {
+        maven {
+            url 'https://infyartifactory.jfrog.io/artifactory/vn-gradle-virtual/'
+            credentials {
+                username = "${artifactory_user}"
+                password = "${artifactory_password}"
+            }
+        }
+    }
+    dependencies {
+        classpath "org.jfrog.buildinfo:build-info-extractor-gradle:4+"
+    }
+}
+//Apply the plugins
+plugins {
+    id 'org.springframework.boot' version '3.1.7'
+    id 'io.spring.dependency-management' version '1.0.11.RELEASE'
+    id 'java'
+    id 'eclipse'
+    id 'jacoco'
+    id 'org.sonarqube' version '4.0.0.2929'
+    id 'pmd'
+    id 'com.jfrog.artifactory' version '4+' 
+    id 'maven-publish'   
+}
+// Define the project and its properties
+group = 'com.infy'
+version = '1-SNAPSHOT'
+//version = '1'
+description = 'Demo project for FA4'
+// Add the Maven Central repository for resolving dependencies
+repositories {
+    mavenCentral()
+}
+// Define project dependencies
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation group: 'com.mysql', name: 'mysql-connector-j', version: '8.2.0'
+    implementation 'org.springframework.boot:spring-boot-devtools'
+    implementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.mockito:mockito-core:4.0.0'
+    //log
+    implementation 'org.springframework.boot:spring-boot-starter-log4j2'
+    configurations.configureEach {
+        exclude group: 'org.apache.logging.log4j', module: 'log4j-to-slf4j'
+        exclude group: 'ch.qos.logback', module: 'logback-classic'
+    }
+}
+// Configure the test task to use JUnit 5
+test {
+    useJUnitPlatform()
+}
+// Jacoco configuration
+jacoco {
+    toolVersion = "0.8.11"
+}
+jacocoTestReport {
+    reports {
+        xml.required = true
+        html.destination file("${buildDir}/reports/jacoco/test/jacco-session.html")
+    }
+    jacocoTestCoverageVerification {
+        violationRules {
+            rule {
+                element = 'CLASS'
+                limit {
+                    counter = 'LINE'
+                    value = 'COVEREDRATIO'
+                    minimum = 0.8
+                }
+            }
+        }
+        afterEvaluate {
+            classDirectories.setFrom(files(classDirectories.files.collect {
+                fileTree(dir: it,
+                        exclude: ['com/infy/api/*',
+                                  'com/infy/utility/*',
+                                  'com/infy/dto/*',
+                                  'com/infy/entity/*',
+                                  'com/infy/exception/*',
+                                  'com/infy/security/*',
+                                  'com/infy/repository/*',
+                                  'com/infy/InfyMovieApplication*',])
+            }))
+        }
+    }
+}
+check.dependsOn jacocoTestCoverageVerification
+tasks.withType(Test).configureEach {
+    finalizedBy jacocoTestReport
+}
+// SonarQube configuration
+sonarqube {
+    properties {
+        property "sonar.projectKey", "Infy_Movie_gradle"
+        property "sonar.projectName", "Infy_Movie_gradle"
+        property "sonar.projectVersion", "1.0"
+        property "sonar.coverage", "src/main/java/com/infy/service/**,src/main/java/com/infy/validation/**"
+        property "sonar.coverage.exclusions",
+                "src/main/java/com/infy/exception/**," + "src/main/java/com/infy/entity/**," + "src/main/java/com/infy/security/**," + "src/main/java/com/infy/dto/**," + "src/main/java/com/infy/utility/**," + "src/main/java/com/infy/api/**," + "src/main/java/com/infy/InfyMovieApplication*," + "src/main/java/com/infy/repository/**"
+        //The below 2 lines ensures build fails if quality gate status fails
+        property "sonar.qualitygate.wait", "true"
+        property "sonar.qualitygate.failOnSonarQubeExitCode", "true"
+        property "sonar.sources", "src/main/java"
+        property "sonar.tests", "src/test/java"
+        property "sonar.java.binaries", "build/classes/java/main"
+        property "sonar.sourceEncoding", "UTF-8"
+        property "sonar.language", "java"
+        property "sonar.dynamicAnalysis", "reuseReports"
+        property "sonar.java.coveragePlugin", "jacoco"
+        property "sonar.coverage.jacoco.htmlreportPaths", "${buildDir}/reports/jacoco/test/jacoco-session.html"
+        property "sonar.coverage.jacoco.metrics", "COVEREDRATIO"
+    }
+}
+// PMD configuration
+pmd {
+    consoleOutput = true
+    ignoreFailures = false
+    ruleSetFiles = files('RuleSet.xml')
+}
+bootJar {
+    archiveFileName = "infymovie.jar"
+}
+// Artifactory configuration
+artifactory {
+    contextUrl = "${artifactory_contextUrl}"
+    publish {
+        repository {
+            repoKey = 'eta-gradle-artifacts'
+            username = "${artifactory_user}"
+            password = "${artifactory_password}"
+            maven = true
+        }
+        defaults {
+            publications('mavenJava')
+        }
+    }
+}
+publishing {
+    publications {
+        mavenJava(MavenPublication) {            
+            artifact("build/libs/infymovie.jar")
+        }
+    }
+}
